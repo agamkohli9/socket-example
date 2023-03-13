@@ -1,45 +1,57 @@
-#include <arpa/inet.h>
-#include <stdio.h>
-#include <string.h>
-#include <sys/socket.h>
+// Server side implementation of UDP client-server model
+#include <bits/stdc++.h>
+#include <stdlib.h>
 #include <unistd.h>
-#include <nlohmann/json.hpp>
-#include <iostream>
-#define PORT 8080
+#include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
 
-using json = nlohmann::json;
+#define PORT	 8080
+#define PAYLOAD_SIZE 1024
 
-int main(int argc, char const* argv[])
-{
-	int status, valread, client_fd;
-	struct sockaddr_in serv_addr;
-	char buffer[1024] = { 0 };
-	if ((client_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		printf("Socket creation error\n");
-		return -1;
+// Driver code
+int main() {
+	int sockfd;
+	char buffer[PAYLOAD_SIZE];
+	struct sockaddr_in servaddr, cliaddr;
+	
+	// Creating socket file descriptor
+	if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
+		perror("socket creation failed");
+		exit(EXIT_FAILURE);
 	}
-
-	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_port = htons(PORT);
-
-	if (inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr) <= 0) {
-		printf("Invalid address\n");
-		return -1;
+	
+	memset(&servaddr, 0, sizeof(servaddr));
+	memset(&cliaddr, 0, sizeof(cliaddr));
+	
+	// Filling server information
+	servaddr.sin_family = AF_INET; // IPv4
+	servaddr.sin_addr.s_addr = INADDR_ANY;
+	servaddr.sin_port = htons(PORT);
+	
+	// Bind the socket with the server address
+	if ( bind(sockfd, (const struct sockaddr *)&servaddr,
+			sizeof(servaddr)) < 0 )
+	{
+		perror("bind failed");
+		exit(EXIT_FAILURE);
 	}
+	
+	socklen_t len;
+	int n;
 
-	if ((status = connect(client_fd, (struct sockaddr*)&serv_addr, sizeof(serv_addr))) < 0) {
-		printf("\nConnection Failed \n");
-		return -1;
+	len = sizeof(cliaddr); //len is value/result
+
+	while (true) {
+		n = recvfrom(sockfd, (char *)buffer, PAYLOAD_SIZE,
+					MSG_WAITALL, ( struct sockaddr *) &cliaddr,
+					&len);
+		buffer[n] = '\0';
+		printf("Client : %s\n", buffer);
 	}
-
-    while (true) {
-        valread = read(client_fd, buffer, 1024);
-        json msg_json = json::parse(std::string(buffer));
-
-        for (auto obj : msg_json[0]["objects"]) { 
-            std::cout << "lat, lon:" << obj["lat"] << ", " << obj["lon"] << std::endl;
-        }
-    }
-
+	
 	return 0;
 }
+

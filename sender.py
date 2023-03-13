@@ -29,9 +29,13 @@ msg ="""[
     }
 ]"""
 while True:
+  sleep(1)
+
   # send message 
-  c.send(msg.encode())
+  try:
+    c.send(msg.encode())
+  except:
+    c, addr = s.accept()
+    continue
 
   print('message sent')
-
-  sleep(5)
